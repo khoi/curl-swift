@@ -46,13 +46,14 @@ public class CURL {
         curl_easy_setopt_bool(handle, CURLOPT_VERBOSE, verbose)
         curl_easy_setopt_long(handle, CURLOPT_NOSIGNAL, 1)
 
-        curl_easy_setopt_write_func(handle, CURLOPT_WRITEFUNCTION, _curl_helper_write_callback)
-        curl_easy_setopt_write_func(handle, CURLOPT_HEADERFUNCTION, _curl_helper_write_callback)
+        curl_easy_setopt_write_func(handle, CURLOPT_WRITEFUNCTION, curl_write_callback_fn)
+        curl_easy_setopt_write_func(handle, CURLOPT_HEADERFUNCTION, curl_write_callback_fn)
     }
 
     public func perform() throws -> Response {
-        var body = _curl_helper_memory_struct(memory: malloc(1), size: 0)
-        defer { free(body.memory) }
+        var body = curl_memory_struct(ptr: malloc(1), size: 0)
+
+        defer { free(body.ptr) }
 
         try callCCurl {
             withUnsafeMutablePointer(to: &body) { pointer in
@@ -64,8 +65,8 @@ public class CURL {
             }
         }
 
-        var header = _curl_helper_memory_struct(memory: malloc(1), size: 0)
-        defer { free(header.memory) }
+        var header = curl_memory_struct(ptr: malloc(1), size: 0)
+        defer { free(header.ptr) }
 
         try callCCurl {
             withUnsafeMutablePointer(to: &header) { pointer in
@@ -83,8 +84,8 @@ public class CURL {
 
         return Response(
             statusCode: try get(info: CURLINFO_RESPONSE_CODE),
-            body: Data(bytes: body.memory, count: body.size),
-            headers: parseHeaderData(data: Data(bytes: header.memory, count: header.size))
+            body: Data(bytes: body.ptr, count: body.size),
+            headers: parseHeaderData(data: Data(bytes: header.ptr, count: header.size))
         )
     }
 

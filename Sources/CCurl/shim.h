@@ -36,23 +36,26 @@ static CURLcode curl_easy_getinfo_long(CURL *curl, CURLINFO info, long *param) {
     return curl_easy_getinfo(curl, info, param);
 }
 
-struct _curl_helper_memory_struct {
-    void *memory;
+struct curl_memory_struct {
+    void *ptr;
     size_t size;
 };
 
-static size_t _curl_helper_write_callback(void *buffer, size_t size, size_t nmemb, void *userp) {
-    size_t real_size = size * nmemb;
+// https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
+static size_t curl_write_callback_fn(void *data, size_t size, size_t nmemb, void *userp) {
+    size_t realsize = size * nmemb;
+    struct curl_memory_struct *mem = (struct curl_memory_struct *)userp;
     
-    struct _curl_helper_memory_struct *mem = (struct _curl_helper_memory_struct *)userp;
+    char *ptr = realloc(mem->ptr, mem->size + realsize + 1);
+    if(ptr == NULL)
+        return 0;  /* out of memory! */
     
-    mem->memory = realloc(mem->memory, mem->size + real_size + 1);
+    mem->ptr = ptr;
+    memcpy(&(mem->ptr[mem->size]), data, realsize);
+    mem->size += realsize;
+    ((char *)mem->ptr)[mem->size] = 0;
     
-    memcpy(&(((char *)mem->memory)[mem->size]), buffer, real_size);
-    mem->size += real_size;
-    ((char *)mem->memory)[mem->size] = 0;
-    
-    return real_size;
+    return realsize;
 }
 
 #endif
