@@ -20,7 +20,7 @@ class Tests: XCTestCase {
         let req = CURL(
             method: "GET",
             url:
-                "https://httpbin.org/response-headers?non_cf=reprehenderit%20cillum%20ad%20ut&esse84=cillum%20qu&irure409=in%20sed%20Ut&esse84=aaa,b%3Ba%3D2"
+                "https://httpbin.org/response-headers?non-cf=reprehenderit%20cillum%20ad%20ut&esse84=cillum%20qu&irure409=in%20sed%20Ut&esse84=aaa,b%3Ba%3D2"
         )
 
         let res = try req.perform()
