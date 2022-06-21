@@ -1,17 +1,17 @@
 import CCurl
-import Dispatch
 import Foundation
 
-public enum CURLError: Error {
-    case `internal`(code: Int, str: String)
-}
-
-public struct CURLResponse {
+public struct Response {
     public var statusCode: Int
-    public var data: Data
+    public var body: Data
+    public var headers: [HTTPHeader]
 }
 
 public class CURL {
+    public enum Error: Swift.Error {
+        case `internal`(code: Int, str: String)
+    }
+
     private var handle: UnsafeMutableRawPointer!
 
     public var connectTimeout: Int {
@@ -31,8 +31,8 @@ public class CURL {
         url: String,
         connectTimeout: Int = 300,
         resourceTimeout: Int = 0,
-        verifyPeer: Bool = true,
-        verifyHost: Bool = true,
+        verifyPeer: Bool = false,
+        verifyHost: Bool = false,
         verbose: Bool = false
     ) {
         handle = curl_easy_init()
@@ -47,55 +47,97 @@ public class CURL {
         curl_easy_setopt_long(handle, CURLOPT_NOSIGNAL, 1)
 
         curl_easy_setopt_write_func(handle, CURLOPT_WRITEFUNCTION, _curl_helper_write_callback)
+        curl_easy_setopt_write_func(handle, CURLOPT_HEADERFUNCTION, _curl_helper_write_callback)
     }
 
-    public func perform() throws -> CURLResponse {
-        var chunk = _curl_helper_memory_struct()
-        chunk.memory = malloc(1)
-        chunk.size = 0
+    public func perform() throws -> Response {
+        var body = _curl_helper_memory_struct(memory: malloc(1), size: 0)
+        defer { free(body.memory) }
 
-        defer {
-            free(chunk.memory)
-        }
-
-        try throwIfError(
-            from: withUnsafeMutablePointer(to: &chunk) { pointer in
+        try callCCurl {
+            withUnsafeMutablePointer(to: &body) { pointer in
                 curl_easy_setopt_write_data(
                     handle,
                     CURLOPT_WRITEDATA,
                     pointer
                 )
             }
-        )
+        }
 
-        try throwIfError(from: curl_easy_perform(handle))
-        var statusCode: Int = -1
-        try throwIfError(
-            from: withUnsafeMutablePointer(to: &statusCode) { pointer in
+        var header = _curl_helper_memory_struct(memory: malloc(1), size: 0)
+        defer { free(header.memory) }
+
+        try callCCurl {
+            withUnsafeMutablePointer(to: &header) { pointer in
+                curl_easy_setopt_write_data(
+                    handle,
+                    CURLOPT_HEADERDATA,
+                    pointer
+                )
+            }
+        }
+
+        try callCCurl {
+            curl_easy_perform(handle)
+        }
+
+        return Response(
+            statusCode: try get(info: CURLINFO_RESPONSE_CODE),
+            body: Data(bytes: body.memory, count: body.size),
+            headers: parseHeaderData(data: Data(bytes: header.memory, count: header.size))
+        )
+    }
+
+    private func callCCurl(block: () -> CURLcode) throws {
+        let code = block()
+        guard code != CURLE_OK else {
+            return
+        }
+
+        throw Self.Error.internal(
+            code: Int(code.rawValue),
+            str: String(cString: curl_easy_strerror(code), encoding: .ascii) ?? "unknown"
+        )
+    }
+
+    private func get(info: CURLINFO) throws -> Int {
+        var value: Int = -1
+
+        try callCCurl {
+            withUnsafeMutablePointer(to: &value) { pointer in
                 curl_easy_getinfo_long(
                     handle,
                     CURLINFO_RESPONSE_CODE,
                     pointer
                 )
             }
-        )
-        let data = Data(bytes: chunk.memory, count: chunk.size)
-
-        return CURLResponse.init(statusCode: statusCode, data: data)
-    }
-
-    private func throwIfError(from code: CURLcode) throws {
-        guard code != CURLE_OK else {
-            return
         }
 
-        throw CURLError.internal(
-            code: Int(code.rawValue),
-            str: String(cString: curl_easy_strerror(code), encoding: .ascii) ?? "unknown"
-        )
+        return value
     }
 
     deinit {
         curl_easy_cleanup(handle)
     }
+}
+
+private func parseHeaderData(data: Data) -> [HTTPHeader] {
+    guard let headerString = String(data: data, encoding: .utf8) else {
+        return []
+    }
+
+    return headerString.split(whereSeparator: \.isNewline)
+        .compactMap { line -> HTTPHeader? in
+            let values = line.split(separator: ":")
+
+            guard values.count > 1 else {
+                return nil
+            }
+
+            let name = String(values[0]).trimmingCharacters(in: CharacterSet.whitespaces)
+            let value = values[1..<values.count].joined()
+                .trimmingCharacters(in: CharacterSet.whitespaces)
+
+            return HTTPHeader(name, value)
+        }
 }
