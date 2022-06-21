@@ -16,7 +16,7 @@ class Tests: XCTestCase {
         XCTAssertEqual(res.body.count, 0)
     }
 
-    func test_Headers() throws {
+    func test_Response_Headers() throws {
         let req = CURL(
             method: "GET",
             url:
@@ -32,7 +32,7 @@ class Tests: XCTestCase {
                 HTTPHeader("content-type", "application/json"),
                 HTTPHeader("content-length", "194"),
                 HTTPHeader("server", "gunicorn/19.9.0"),
-                HTTPHeader("non_cf", "reprehenderit cillum ad ut"),
+                HTTPHeader("non-cf", "reprehenderit cillum ad ut"),
                 HTTPHeader("esse84", "cillum qu"),
                 HTTPHeader("esse84", "aaa,b;a=2"),
                 HTTPHeader("irure409", "in sed Ut"),
@@ -42,4 +42,29 @@ class Tests: XCTestCase {
         )
     }
 
+    func test_Request_Headers() throws {
+        let sendingHeaders = [
+            HTTPHeader("Non-Cf", "reprehenderit cillum ad ut"),
+            HTTPHeader("Esse84", "cillum qu"),
+            HTTPHeader("Esse85", "aaa,b;a=2"),
+            HTTPHeader("Irure409", "in sed Ut"),
+        ]
+        let req = CURL(
+            method: "GET",
+            url:
+                "https://httpbin.org/get",
+            headers: sendingHeaders
+        )
+
+        let res = try req.perform()
+
+        XCTAssertEqual(res.statusCode, 200)
+
+        let jsonObject = try JSONSerialization.jsonObject(with: res.body) as! [String: Any]
+        let responseHeaders = jsonObject["headers"] as! [String: String]
+
+        sendingHeaders.forEach {
+            XCTAssertEqual(responseHeaders[$0.name], $0.value)
+        }
+    }
 }

@@ -13,6 +13,7 @@ public class CURL {
     }
 
     private var handle: UnsafeMutableRawPointer!
+    public var headers: [HTTPHeader]
 
     public var connectTimeout: Int {
         didSet {
@@ -26,11 +27,19 @@ public class CURL {
         }
     }
 
+    public var followRedirection: Bool {
+        didSet {
+            curl_easy_setopt_long(handle, CURLOPT_FOLLOWLOCATION, followRedirection ? 1 : 0)
+        }
+    }
+
     public init(
         method: String,
         url: String,
+        headers: [HTTPHeader] = [],
         connectTimeout: Int = 300,
         resourceTimeout: Int = 0,
+        followRedirection: Bool = false,
         verifyPeer: Bool = false,
         verifyHost: Bool = false,
         verbose: Bool = false
@@ -38,6 +47,8 @@ public class CURL {
         handle = curl_easy_init()
         self.connectTimeout = connectTimeout
         self.resourceTimeout = resourceTimeout
+        self.followRedirection = followRedirection
+        self.headers = headers
 
         curl_easy_setopt_string(handle, CURLOPT_URL, url)
         curl_easy_setopt_string(handle, CURLOPT_CUSTOMREQUEST, method)
@@ -51,8 +62,17 @@ public class CURL {
     }
 
     public func perform() throws -> Response {
-        var body = curl_memory_struct(ptr: malloc(1), size: 0)
+        var headerChunk: UnsafeMutablePointer<curl_slist>! = nil
+        if headers.count > 0 {
+            headers.forEach {
+                headerChunk = curl_slist_append(headerChunk, $0.description)
+            }
+            curl_easy_setopt_ptr_slist(handle, CURLOPT_HTTPHEADER, headerChunk)
 
+        }
+        defer { curl_slist_free_all(headerChunk) }
+
+        var body = curl_memory_struct(ptr: malloc(1), size: 0)
         defer { free(body.ptr) }
 
         try callCCurl {
