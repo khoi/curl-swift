@@ -1,4 +1,4 @@
-# curl-swift ![status badge](https://github.com/khoi/curl-swift/actions/workflows/test.yml/badge.svg)
+# ➰ curl-swift ![status badge](https://github.com/khoi/curl-swift/actions/workflows/test.yml/badge.svg)
 
 An opinionated `libcurl` wrapper for Swift
 
