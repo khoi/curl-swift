@@ -95,4 +95,28 @@ class Tests: XCTestCase {
         XCTAssertEqual(res.statusCode, 200)
         XCTAssertEqual(res.effectiveURL, "http://httpbin.org/get")
     }
+
+    func test_TotalResponseTime() throws {
+        let req = CURL(
+            method: "GET",
+            url:
+                "https://httpbin.org/get"
+        )
+
+        let res = try req.perform()
+
+        XCTAssertTrue(res.totalResponseTime > 100)
+    }
+
+    func test_TotalSizeDowload() throws {
+        let req = CURL(
+            method: "GET",
+            url:
+                "https://httpbin.org/get"
+        )
+
+        let res = try req.perform()
+
+        XCTAssertTrue(res.totalSizeDownload > 100)
+    }
 }

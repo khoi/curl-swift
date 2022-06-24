@@ -6,6 +6,8 @@ public struct Response {
     public let body: Data
     public let headers: [HTTPHeader]
     public let effectiveURL: String
+    public let totalResponseTime: Int
+    public let totalSizeDownload: Int
 }
 
 public class CURL {
@@ -107,14 +109,13 @@ public class CURL {
             curl_easy_perform(handle)
         }
 
-        // CURLINFO_TOTAL_TIME_T
-        // CURLINFO_SIZE_DOWNLOAD_T
-
         return Response(
             statusCode: try get(info: CURLINFO_RESPONSE_CODE),
             body: Data(bytes: body.ptr, count: body.size),
             headers: parseHeaderData(data: Data(bytes: header.ptr, count: header.size)),
-            effectiveURL: try get(info: CURLINFO_EFFECTIVE_URL)
+            effectiveURL: try get(info: CURLINFO_EFFECTIVE_URL),
+            totalResponseTime: try get(info: CURLINFO_TOTAL_TIME_T),
+            totalSizeDownload: try get(info: CURLINFO_SIZE_DOWNLOAD_T)
         )
     }
 
