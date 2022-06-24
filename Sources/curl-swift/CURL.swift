@@ -10,11 +10,8 @@ public struct Response {
     public let totalSizeDownload: Int
 }
 
-public class CURL {
-    public enum Error: Swift.Error {
-        case `internal`(code: Int, str: String)
-    }
 
+public class CURL {
     private var handle: UnsafeMutableRawPointer!
     public var headers: [HTTPHeader]
 
@@ -56,7 +53,7 @@ public class CURL {
     ) {
         handle = curl_easy_init()
         self.headers = headers
-
+        
         curl_easy_setopt_string(handle, CURLOPT_URL, url)
         curl_easy_setopt_string(handle, CURLOPT_CUSTOMREQUEST, method)
         curl_easy_setopt_bool(handle, CURLOPT_SSL_VERIFYPEER, verifyPeer)
@@ -68,7 +65,11 @@ public class CURL {
         curl_easy_setopt_write_func(handle, CURLOPT_HEADERFUNCTION, curl_write_callback_fn)
     }
 
-    public func perform() throws -> Response {
+    public func perform(share: UnsafeMutableRawPointer! = nil) throws -> Response {
+        if share != nil {
+            curl_easy_setopt_share(handle, share)
+        }
+        
         var headerChunk: UnsafeMutablePointer<curl_slist>! = nil
         if headers.count > 0 {
             headers.forEach {
@@ -82,7 +83,7 @@ public class CURL {
         var body = curl_memory_struct(ptr: malloc(1), size: 0)
         defer { free(body.ptr) }
 
-        try callCCurl {
+        try callCCurlAndThrowCURLError {
             withUnsafeMutablePointer(to: &body) { pointer in
                 curl_easy_setopt_write_data(
                     handle,
@@ -95,7 +96,7 @@ public class CURL {
         var header = curl_memory_struct(ptr: malloc(1), size: 0)
         defer { free(header.ptr) }
 
-        try callCCurl {
+        try callCCurlAndThrowCURLError {
             withUnsafeMutablePointer(to: &header) { pointer in
                 curl_easy_setopt_write_data(
                     handle,
@@ -105,7 +106,7 @@ public class CURL {
             }
         }
 
-        try callCCurl {
+        try callCCurlAndThrowCURLError {
             curl_easy_perform(handle)
         }
 
@@ -119,22 +120,10 @@ public class CURL {
         )
     }
 
-    private func callCCurl(block: () -> CURLcode) throws {
-        let code = block()
-        guard code != CURLE_OK else {
-            return
-        }
-
-        throw Self.Error.internal(
-            code: Int(code.rawValue),
-            str: String(cString: curl_easy_strerror(code), encoding: .ascii) ?? "unknown"
-        )
-    }
-
     private func get(info: CURLINFO) throws -> String {
         var stringPointer: UnsafePointer<CChar>? = nil
 
-        try callCCurl {
+        try callCCurlAndThrowCURLError {
             curl_easy_getinfo_string(
                 handle,
                 info,
@@ -152,7 +141,7 @@ public class CURL {
     private func get(info: CURLINFO) throws -> Int {
         var value: Int = -1
 
-        try callCCurl {
+        try callCCurlAndThrowCURLError {
             withUnsafeMutablePointer(to: &value) { pointer in
                 curl_easy_getinfo_long(
                     handle,

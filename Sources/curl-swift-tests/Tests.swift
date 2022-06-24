@@ -4,13 +4,15 @@ import XCTest
 @testable import curl_swift
 
 class Tests: XCTestCase {
+    let share = CURLSH()
+    
     func test_StatusCode() throws {
         let req = CURL(
             method: "GET",
             url: "https://httpbin.org/status/401"
         )
-
-        let res = try req.perform()
+        
+        let res = try share.perform(curl: req)
 
         XCTAssertEqual(res.statusCode, 401)
         XCTAssertEqual(res.body.count, 0)
@@ -23,7 +25,7 @@ class Tests: XCTestCase {
                 "https://httpbin.org/response-headers?non-cf=reprehenderit%20cillum%20ad%20ut&esse84=cillum%20qu&irure409=in%20sed%20Ut&esse84=aaa,b%3Ba%3D2"
         )
 
-        let res = try req.perform()
+        let res = try share.perform(curl: req)
 
         XCTAssertEqual(res.statusCode, 200)
         XCTAssertEqual(
@@ -56,7 +58,7 @@ class Tests: XCTestCase {
             headers: sendingHeaders
         )
 
-        let res = try req.perform()
+        let res = try share.perform(curl: req)
 
         XCTAssertEqual(res.statusCode, 200)
 
@@ -76,7 +78,7 @@ class Tests: XCTestCase {
 
         req.followRedirection = false
 
-        let res = try req.perform()
+        let res = try share.perform(curl: req)
 
         XCTAssertEqual(res.statusCode, 302)
         XCTAssertEqual(res.effectiveURL, "http://httpbin.org/absolute-redirect/1")
@@ -90,7 +92,7 @@ class Tests: XCTestCase {
 
         req.followRedirection = true
 
-        let res = try req.perform()
+        let res = try share.perform(curl: req)
 
         XCTAssertEqual(res.statusCode, 200)
         XCTAssertEqual(res.effectiveURL, "http://httpbin.org/get")
@@ -103,7 +105,7 @@ class Tests: XCTestCase {
                 "https://httpbin.org/get"
         )
 
-        let res = try req.perform()
+        let res = try share.perform(curl: req)
 
         XCTAssertTrue(res.totalResponseTime > 100)
     }
@@ -115,7 +117,7 @@ class Tests: XCTestCase {
                 "https://httpbin.org/get"
         )
 
-        let res = try req.perform()
+        let res = try share.perform(curl: req)
 
         XCTAssertTrue(res.totalSizeDownload > 100)
     }
