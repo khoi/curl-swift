@@ -7,7 +7,7 @@ An opinionated `libcurl` wrapper for Swift
 There are 2 ways to use this library which kinda represents the [libcurl-easy](https://curl.se/libcurl/c/libcurl-easy.html) and [libcurl-share](https://curl.se/libcurl/c/libcurl-share.html)
 
 ### `CURL.swift` 
-Each request is run in total isolation. 
+Each request runs in total isolation. 
 
 ```swift
 let req = CURL(
