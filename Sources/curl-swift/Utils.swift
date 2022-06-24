@@ -1,5 +1,5 @@
-import Foundation
 import CCurl
+import Foundation
 
 func callCCurlAndThrowCURLError(block: () -> CURLcode) throws {
     let code = block()
@@ -7,7 +7,7 @@ func callCCurlAndThrowCURLError(block: () -> CURLcode) throws {
         return
     }
 
-    throw CurlError.internal(
+    throw CURLError.internal(
         code: Int(code.rawValue),
         str: String(cString: curl_easy_strerror(code), encoding: .ascii) ?? "unknown"
     )

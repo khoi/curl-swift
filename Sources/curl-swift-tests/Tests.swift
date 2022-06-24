@@ -5,13 +5,13 @@ import XCTest
 
 class Tests: XCTestCase {
     let share = CURLSH()
-    
+
     func test_StatusCode() throws {
         let req = CURL(
             method: "GET",
             url: "https://httpbin.org/status/401"
         )
-        
+
         let res = try share.perform(curl: req)
 
         XCTAssertEqual(res.statusCode, 401)

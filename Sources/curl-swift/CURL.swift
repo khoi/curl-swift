@@ -10,7 +10,6 @@ public struct Response {
     public let totalSizeDownload: Int
 }
 
-
 public class CURL {
     private var handle: UnsafeMutableRawPointer!
     public var headers: [HTTPHeader]
@@ -53,7 +52,7 @@ public class CURL {
     ) {
         handle = curl_easy_init()
         self.headers = headers
-        
+
         curl_easy_setopt_string(handle, CURLOPT_URL, url)
         curl_easy_setopt_string(handle, CURLOPT_CUSTOMREQUEST, method)
         curl_easy_setopt_bool(handle, CURLOPT_SSL_VERIFYPEER, verifyPeer)
@@ -69,7 +68,7 @@ public class CURL {
         if share != nil {
             curl_easy_setopt_share(handle, share)
         }
-        
+
         var headerChunk: UnsafeMutablePointer<curl_slist>! = nil
         if headers.count > 0 {
             headers.forEach {

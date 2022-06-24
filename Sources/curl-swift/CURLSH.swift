@@ -1,5 +1,5 @@
-import Foundation
 import CCurl
+import Foundation
 
 public class CURLSH {
     private var share: UnsafeMutableRawPointer!
@@ -11,17 +11,33 @@ public class CURLSH {
         shareConnectionCache: Bool = true
     ) {
         share = curl_share_init()
-        
-        curl_share_setopt_lockdata(share, shareCookie ? CURLSHOPT_SHARE : CURLSHOPT_UNSHARE, CURL_LOCK_DATA_COOKIE)
-        curl_share_setopt_lockdata(share, shareDNSCache ? CURLSHOPT_SHARE : CURLSHOPT_UNSHARE, CURL_LOCK_DATA_DNS);
-        curl_share_setopt_lockdata(share, shareSSLSession ? CURLSHOPT_SHARE : CURLSHOPT_UNSHARE, CURL_LOCK_DATA_SSL_SESSION)
-        curl_share_setopt_lockdata(share, shareConnectionCache ? CURLSHOPT_SHARE : CURLSHOPT_UNSHARE, CURL_LOCK_DATA_CONNECT);
+
+        curl_share_setopt_lockdata(
+            share,
+            shareCookie ? CURLSHOPT_SHARE : CURLSHOPT_UNSHARE,
+            CURL_LOCK_DATA_COOKIE
+        )
+        curl_share_setopt_lockdata(
+            share,
+            shareDNSCache ? CURLSHOPT_SHARE : CURLSHOPT_UNSHARE,
+            CURL_LOCK_DATA_DNS
+        )
+        curl_share_setopt_lockdata(
+            share,
+            shareSSLSession ? CURLSHOPT_SHARE : CURLSHOPT_UNSHARE,
+            CURL_LOCK_DATA_SSL_SESSION
+        )
+        curl_share_setopt_lockdata(
+            share,
+            shareConnectionCache ? CURLSHOPT_SHARE : CURLSHOPT_UNSHARE,
+            CURL_LOCK_DATA_CONNECT
+        )
     }
-    
+
     public func perform(curl: CURL) throws -> Response {
         try curl.perform(share: share)
     }
-    
+
     deinit {
         curl_share_cleanup(share)
     }

@@ -1,5 +1,5 @@
 import Foundation
 
-public enum CurlError: Error {
+public enum CURLError: Error {
     case `internal`(code: Int, str: String)
 }
