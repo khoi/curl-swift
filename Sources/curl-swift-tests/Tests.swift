@@ -67,4 +67,32 @@ class Tests: XCTestCase {
             XCTAssertEqual(responseHeaders[$0.name], $0.value)
         }
     }
+
+    func test_FollowRedirect_SetToFalse() throws {
+        let req = CURL(
+            method: "GET",
+            url: "http://httpbin.org/absolute-redirect/1"
+        )
+
+        req.followRedirection = false
+
+        let res = try req.perform()
+
+        XCTAssertEqual(res.statusCode, 302)
+        XCTAssertEqual(res.effectiveURL, "http://httpbin.org/absolute-redirect/1")
+    }
+
+    func test_FollowRedirect_SetToTrue() throws {
+        let req = CURL(
+            method: "GET",
+            url: "http://httpbin.org/absolute-redirect/1"
+        )
+
+        req.followRedirection = true
+
+        let res = try req.perform()
+
+        XCTAssertEqual(res.statusCode, 200)
+        XCTAssertEqual(res.effectiveURL, "http://httpbin.org/get")
+    }
 }

@@ -36,6 +36,10 @@ static CURLcode curl_easy_getinfo_long(CURL *curl, CURLINFO info, long *param) {
     return curl_easy_getinfo(curl, info, param);
 }
 
+static CURLcode curl_easy_getinfo_string(CURL *curl, CURLINFO info, const char **param) {
+    return curl_easy_getinfo(curl, info, param);
+}
+
 struct curl_memory_struct {
     void *ptr;
     size_t size;

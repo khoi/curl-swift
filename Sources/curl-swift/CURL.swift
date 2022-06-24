@@ -2,9 +2,10 @@ import CCurl
 import Foundation
 
 public struct Response {
-    public var statusCode: Int
-    public var body: Data
-    public var headers: [HTTPHeader]
+    public let statusCode: Int
+    public let body: Data
+    public let headers: [HTTPHeader]
+    public let effectiveURL: String
 }
 
 public class CURL {
@@ -15,21 +16,33 @@ public class CURL {
     private var handle: UnsafeMutableRawPointer!
     public var headers: [HTTPHeader]
 
-    public var connectTimeout: Int {
+    public var connectTimeout: Int = 300 {
         didSet {
             curl_easy_setopt_long(handle, CURLOPT_CONNECTTIMEOUT, connectTimeout)
         }
     }
 
-    public var resourceTimeout: Int {
+    public var resourceTimeout: Int = 0 {
         didSet {
             curl_easy_setopt_long(handle, CURLOPT_TIMEOUT, resourceTimeout)
         }
     }
 
-    public var followRedirection: Bool {
+    public var followRedirection: Bool = false {
         didSet {
             curl_easy_setopt_long(handle, CURLOPT_FOLLOWLOCATION, followRedirection ? 1 : 0)
+        }
+    }
+
+    public var verifyPeer: Bool = false {
+        didSet {
+            curl_easy_setopt_bool(handle, CURLOPT_SSL_VERIFYPEER, verifyPeer)
+        }
+    }
+
+    public var verifyHost: Bool = false {
+        didSet {
+            curl_easy_setopt_bool(handle, CURLOPT_SSL_VERIFYHOST, verifyHost)
         }
     }
 
@@ -37,17 +50,9 @@ public class CURL {
         method: String,
         url: String,
         headers: [HTTPHeader] = [],
-        connectTimeout: Int = 300,
-        resourceTimeout: Int = 0,
-        followRedirection: Bool = false,
-        verifyPeer: Bool = false,
-        verifyHost: Bool = false,
         verbose: Bool = false
     ) {
         handle = curl_easy_init()
-        self.connectTimeout = connectTimeout
-        self.resourceTimeout = resourceTimeout
-        self.followRedirection = followRedirection
         self.headers = headers
 
         curl_easy_setopt_string(handle, CURLOPT_URL, url)
@@ -102,10 +107,14 @@ public class CURL {
             curl_easy_perform(handle)
         }
 
+        // CURLINFO_TOTAL_TIME_T
+        // CURLINFO_SIZE_DOWNLOAD_T
+
         return Response(
             statusCode: try get(info: CURLINFO_RESPONSE_CODE),
             body: Data(bytes: body.ptr, count: body.size),
-            headers: parseHeaderData(data: Data(bytes: header.ptr, count: header.size))
+            headers: parseHeaderData(data: Data(bytes: header.ptr, count: header.size)),
+            effectiveURL: try get(info: CURLINFO_EFFECTIVE_URL)
         )
     }
 
@@ -121,6 +130,24 @@ public class CURL {
         )
     }
 
+    private func get(info: CURLINFO) throws -> String {
+        var stringPointer: UnsafePointer<CChar>? = nil
+
+        try callCCurl {
+            curl_easy_getinfo_string(
+                handle,
+                info,
+                &stringPointer
+            )
+        }
+
+        guard let stringPointer = stringPointer else {
+            return ""
+        }
+
+        return String(validatingUTF8: stringPointer) ?? ""
+    }
+
     private func get(info: CURLINFO) throws -> Int {
         var value: Int = -1
 
@@ -128,7 +155,7 @@ public class CURL {
             withUnsafeMutablePointer(to: &value) { pointer in
                 curl_easy_getinfo_long(
                     handle,
-                    CURLINFO_RESPONSE_CODE,
+                    info,
                     pointer
                 )
             }
